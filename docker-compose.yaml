@@ -1,0 +1,46 @@
+version: "2.3"
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: api
+    ports:
+      - "${APP_PORT}:7070"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    env_file: .env
+
+  mysql:
+    image: mysql:5.7
+    platform: linux/amd64
+    container_name: mysql_container
+    command: mysqld --user=root
+    volumes:
+      - ./src/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    environment:
+      - MYSQL_DATABASE=
+      - MYSQL_USER=
+      - MYSQL_PASSWORD=
+      - MYSQL_ROOT_PASSWORD=
+    healthcheck:
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
+      timeout: 5s
+      retries: 10
+
+  redis:
+    container_name: redis_container
+    image: redis:6
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      -  "${REDIS_PORT}:${REDIS_PORT}"
+    volumes:
+      - ../docker/config/redis.conf:/usr/local/etc/redis/redis.conf
+  
+networks:
+  default:
+    external: true
+    name: gateway
